@@ -3,27 +3,65 @@
 
    on:
      push:
-       branches:
-         - main  
+       branches: [main, master] 
 
    jobs:
      build:
        runs-on: ubuntu-latest
 
        steps:
-         - name: Checkout code
+         - name: Check out code
            uses: actions/checkout@v2
 
+         - name: use node.js
+           uses: actions/setup-node@v2
+           with:
+            node-version: "20"
+
+         - name: Install dependencies
+           run: npm ci
+
+         - name: Print debuggint information
+           run: |
+            echo "Node Version: $(node --version)"
+            echo "NPM Version: $(npm --version)"
+            echo "Working Directory: $(pwd)"
+            echo "Contents of node_modules: $(ls -1 node_modules)"
+    test:
+      needs: build
+      runs-on: ubuntu-latest
+
+      steps:
+         - name: Check out code
+           uses: actions/checkout@v2
+
+         - name: use node.js
+           uses: actions/setup-node@v2
+           with:
+            node-version: "20"
+          
          - name: Install dependencies
            run: npm install
 
          - name: Run tests
            run: npm test
 
-         - name: Deploy to Vercel
-           uses: amondnet/vercel-action@v20
-           with:
-             vercel-token: b2vT6VJRHQ9d0F8G2fSnURQH
-             vercel-org-id: team_sJNDCE49K9JGoMWvEG3sh6z0
-             vercel-project-id: prj_xe1H09iNnKx2cMcN1w43Ne8VTyTM
-           
+    deploy:
+      needs: test
+      runs-on: ubuntu-latest
+        steps:
+          - name: Check out code
+            uses: actions/checkout@v2
+          - uses: actions/setup-node@v2
+            with:
+              node-version: "20"
+          - name: Install dependencies
+            run: npm install
+          - name: Instal Vercel CLI
+            run: npm install --global vercel@latest
+          - name: Pull Vercel Environment Information
+            run: vercel pull --yes --environment-preview --token-${{ secrets.VERCEL_TOKEN}}
+          - name: Build Project Artifacts
+            run: vercel build --token-${{ secrets.VERCEL_TOKEN}}
+          - Deploy Project Artifacts to Vercel
+            run: vercel deploy --prebuilt --token${{ secrets.VERCEL_TOKEN}}
